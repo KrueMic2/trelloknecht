@@ -78,7 +78,9 @@ func registerQR(pdf *gofpdf.Fpdf, card *trello.Card) {
 	// Successfully generated ../../pdf/contrib_barcode_RegisterQR.pdf
 }
 
-func writeLabel(pdf *gofpdf.Fpdf, card *trello.Card) string {
+func createPDF(card *trello.Card) string {
+	pdf := pdfBaseSetup()
+
 	headFontSize, _ := strconv.ParseFloat(configuration["headFontSize"], 64)
 	pdf.SetFont(configuration["fontFamily"], configuration["headFontStyle"], headFontSize)
 	tr := pdf.UnicodeTranslatorFromDescriptor("")
@@ -114,28 +116,23 @@ func writeLabel(pdf *gofpdf.Fpdf, card *trello.Card) string {
 	html = pdf.HTMLBasicNew()
 	html.Write(lineHt, tr(htmlString))
 	fileName := configuration["tmpDirName"] + "/" + getUUID() + ".pdf"
-	cardByFileName[fileName] = card
 
 	err := pdf.OutputFileAndClose(fileName)
 
 	if err != nil {
 		log.Errorf("cannot create pdf-file %v\n", err)
-
 	}
+
+	log.Infof("pdf-file created %v\n", fileName)
 	return fileName
 }
 
-func printLabels(pdfList []string) {
-	for _, pdf := range pdfList {
-		commandResult := new(Resultset)
-		commandResult.OSCommand = "/usr/bin/lp"
-		commandResult.CommandArgs = []string{"-o", "fit-to-page", "-o", "media=" + configuration["printerMedia"], "-o",
-			configuration["printerOrientation"], "-n", configuration["numberOfCopiesPrnt"], "-d", configuration["printerName"], pdf}
-		commandResult.execCommand()
-		if commandResult.SuccessfullExecution == true {
-			printedCards = append(printedCards, pdf)
-		}
+func printFile(pdfFilename string) bool {
+	commandResult := new(Resultset)
+	commandResult.OSCommand = "/usr/bin/lp"
+	commandResult.CommandArgs = []string{"-o", "fit-to-page", "-o", "media=" + configuration["printerMedia"], "-o",
+		configuration["printerOrientation"], "-n", configuration["numberOfCopiesPrnt"], "-d", configuration["printerName"], pdfFilename}
+	commandResult.execCommand()
 
-	}
-
+	return commandResult.SuccessfullExecution
 }

@@ -117,7 +117,6 @@ func init() {
 
 func cleanUp(dirName string) {
 	os.RemoveAll(dirName)
-
 }
 
 func getOutboundIP() net.IP {
@@ -169,16 +168,4 @@ func (r *Resultset) execCommand() {
 
 	}
 	return
-}
-
-func reportPrints() {
-	for _, pdf := range printedCards {
-		log.Infof("printed card %v", cardByFileName[pdf].Name)
-	}
-
-}
-func sweepOut() {
-	cardByFileName = nil
-	printedCards = nil
-
 }

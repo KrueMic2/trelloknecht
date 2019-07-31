@@ -10,43 +10,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func isPrintedLabelOnBoard(card *trello.Card) bool {
-	res := true
-	for _, label := range card.Labels {
-		if label.Name == configuration["newLabelAfterPrint"] {
-			res = false
-		}
-
+func swapLabel(card *trello.Card) {
+	r := new(trello.Label)
+	//var l card.Labels
+	err := card.RemoveIDLabel(labelIDByName[configuration["toPrintedLabelName"]], r)
+	if err != nil {
+		log.Fatalf("removing Label: %v with %v \n", configuration["toPrintedLabelName"], err)
 	}
-	return res
-}
-
-func swapLabel(cards []*trello.Card) {
-	for _, card := range cards {
-		r := new(trello.Label)
-		//var l card.Labels
-		err := card.RemoveIDLabel(labelIDByName[configuration["toPrintedLabelName"]], r)
-		if err != nil {
-			log.Fatalf("removing  Label : %v with %v \n", configuration["toPrintedLabelName"], err)
-		}
-		if isPrintedLabelOnBoard(card) {
-			err = card.AddIDLabel(newLabelAfterPrtIDs[card.IDBoard])
-			if err != nil {
-				log.Fatalf("adding Label: %v  with %v\n", configuration["newLabelAfterPrint"], err)
-			}
-		}
+	err = card.AddIDLabel(newLabelAfterPrtIDs[card.IDBoard])
+	if err != nil {
+		log.Fatalf("adding Label: %v with %v\n", configuration["newLabelAfterPrint"], err)
 	}
-}
-
-func writeLabels(cardList []*trello.Card) []string {
-	pdfFileList := make([]string, 0)
-	for _, card := range cardList {
-		pdf := pdfBaseSetup()
-		pdfFileName := writeLabel(pdf, card)
-		pdfFileList = append(pdfFileList, pdfFileName)
-	}
-
-	return pdfFileList
 }
 
 func getBoards(client *trello.Client) []*trello.Board {
@@ -60,6 +34,15 @@ func getBoards(client *trello.Client) []*trello.Board {
 		log.Fatal("Cannot get board lists from trello")
 	}
 	return boards
+}
+
+func isPrinted(card *trello.Card) bool {
+	for _, label := range card.Labels {
+		if label.Name == configuration["newLabelAfterPrint"] {
+			return true
+		}
+	}
+	return false
 }
 
 func joinedLabel(card *trello.Card) string {
@@ -92,10 +75,9 @@ func boarListIDsToNames(board *trello.Board) {
 		// todo add this to cleanup
 		listNameByID[list.ID] = list.Name
 		listIDByName[list.Name] = list.ID
-
 	}
-
 }
+
 func getOwnCardFromPrinterBoard(c *trello.Client) *trello.Card {
 	board, err := c.GetBoard("5bceb330ba13f689ee477774", trello.Defaults())
 	if err != nil {
@@ -159,9 +141,6 @@ func createIPCardOnBoard() {
 	log.Infof("Trello printer: %v stored info on config board", configuration["knechtID"])
 }
 
-func cardAddAndRemove() {
-
-}
 func createTestCard(client *trello.Client) {
 	list, err := client.GetList(listIDByName["IPs"], trello.Defaults())
 	if err != nil {
@@ -183,6 +162,7 @@ func createTestCard(client *trello.Client) {
 	}
 
 }
+
 func getLabels() []*trello.Card {
 	cardList := make([]*trello.Card, 0)
 	client := trello.NewClient(configuration["trelloAppKey"], configuration["trelloToken"])
@@ -196,7 +176,6 @@ func getLabels() []*trello.Card {
 	}
 
 	return cardList
-
 }
 
 func getMatchingCardsFromBoard(board *trello.Board) []*trello.Card {
@@ -240,9 +219,12 @@ func getPrintedLabelID(board *trello.Board) {
 	for _, label := range labels {
 		if label.Name == configuration["newLabelAfterPrint"] {
 			newLabelAfterPrtIDs[board.ID] = label.ID
+			return
 		}
 	}
+	log.Fatalf("No newLabelAfterPrint-label found on board: %v\n", board.Name)
 }
+
 func shortenStringIfToLong(instring string) string {
 	wordList := strings.Split(instring, " ")
 	shortendString := ""

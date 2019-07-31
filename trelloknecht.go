@@ -5,6 +5,7 @@ import (
 
 	// "github.com/adlio/trello"
 	"github.com/adlio/trello"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -58,8 +59,6 @@ var (
 	listNameByID        = make(map[string]string)
 	listIDByName        = make(map[string]string)
 	labelIDByName       = make(map[string]string)
-	cardByFileName      = make(map[string]*trello.Card)
-	printedCards        = make([]string, 0)
 	// composed vars
 
 	pdfDocDimension = []float64{}
@@ -87,6 +86,16 @@ type Resultset struct {
 	ErrorStr             string    `json:"errorstr,omitempty"`
 }
 
+func printCard(card *trello.Card) string {
+	if !isPrinted(card) {
+		pdfFilename := createPDF(card)
+		if printFile(pdfFilename) {
+			swapLabel(card)
+			log.Infof("Card v% printed. (file: %v)\n", card.Name, pdfFilename)
+		}
+	}
+}
+
 func main() {
 	defer cleanUp(configuration["tmpDirName"])
 	//sleeptime, err := strconv.ad(configuration["waitIntervalSeconds"])
@@ -95,12 +104,12 @@ func main() {
 
 	for {
 		cardList := getLabels()
-		pdfFileList := writeLabels(cardList)
-		printLabels(pdfFileList)
-		swapLabel(cardList)
-		reportPrints()
-		sweepOut()
-		time.Sleep(60 * time.Second)
+		for _, card := range cardList {
+			printCard(card)
+		}
+
+		// wait 90 seconds for next run
+		time.Sleep(90 * time.Second)
 	}
 
 }
